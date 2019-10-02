@@ -1,0 +1,21 @@
+{
+    "name": "Mount",
+    "id": 20000,
+    "commands": [
+        {
+            "theme": "Mount",
+            "syntax": "Mount WATCH(&T)",
+            "threadSafe": false
+        },
+        {
+            "theme": "Mount",
+            "syntax": "Unmount(&T)",
+            "threadSafe": false
+        },
+        {
+            "theme": "Mount",
+            "syntax": "Mount(&T)",
+            "threadSafe": false
+        }
+    ]
+}
