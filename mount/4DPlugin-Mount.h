@@ -16,6 +16,8 @@
 #include "C_TEXT.h"
 #include "json.h"
 
+#include <DiskArbitration/DiskArbitration.h>
+
 void listenerInit(void);
 void listenerLoop(void);
 void listenerLoopStart(void);

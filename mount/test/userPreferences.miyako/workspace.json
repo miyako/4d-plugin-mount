@@ -2,11 +2,24 @@
 	"editors": [
 		{
 			"type": "method",
-			"id": 2147483647,
+			"id": 2147483642,
+			"previousTabType": "method",
+			"previousTabID": 2147483639,
 			"codeDescriptor": {
 				"type": 1,
-				"methodName": "Method9"
+				"methodName": "TEST"
 			}
+		},
+		{
+			"type": "method",
+			"id": 2147483639,
+			"codeDescriptor": {
+				"type": 1,
+				"methodName": "TEST_1"
+			}
+		},
+		{
+			"type": "explorer"
 		}
 	]
 }

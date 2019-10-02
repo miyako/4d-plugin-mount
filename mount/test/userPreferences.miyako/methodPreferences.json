@@ -171,13 +171,13 @@
 		"stamp": "2019-07-02T23:15:40.975Z"
 	},
 	"Sources/Methods/TEST.4dm": {
-		"startSelection": 0,
-		"endSelection": 0,
-		"firstSelectedLine": 40,
-		"lastSelectedLine": 40,
+		"startSelection": 14,
+		"endSelection": 25,
+		"firstSelectedLine": 0,
+		"lastSelectedLine": 0,
 		"folding": [],
 		"bookmarks": [],
-		"stamp": "2019-07-07T00:11:38.643Z"
+		"stamp": "2019-10-02T00:31:29.506Z"
 	},
 	"Sources/Methods/TEST_v17.4dm": {
 		"startSelection": 0,
@@ -189,21 +189,21 @@
 		"stamp": "2019-07-07T00:13:49.000Z"
 	},
 	"Sources/Methods/mount_watch.4dm": {
-		"startSelection": 0,
-		"endSelection": 0,
-		"firstSelectedLine": 3,
-		"lastSelectedLine": 3,
+		"startSelection": 9,
+		"endSelection": 9,
+		"firstSelectedLine": 15,
+		"lastSelectedLine": 15,
 		"folding": [],
 		"bookmarks": [],
-		"stamp": "2019-10-02T06:51:20.678Z"
+		"stamp": "2019-10-02T13:30:39.936Z"
 	},
-	"Sources/Methods/Method9.4dm": {
-		"startSelection": 14,
-		"endSelection": 25,
-		"firstSelectedLine": 0,
-		"lastSelectedLine": 0,
+	"Sources/Methods/TEST_1.4dm": {
+		"startSelection": 16,
+		"endSelection": 16,
+		"firstSelectedLine": 2,
+		"lastSelectedLine": 2,
 		"folding": [],
 		"bookmarks": [],
-		"stamp": "2019-10-02T00:31:29.506Z"
+		"stamp": "2019-10-02T14:05:47.383Z"
 	}
 }

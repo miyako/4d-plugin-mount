@@ -24,6 +24,7 @@
 		D16F321723442C8D0059DD21 /* 4DPlugin-JSON.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D16F321523442C8D0059DD21 /* 4DPlugin-JSON.cpp */; };
 		D16F321823442C8D0059DD21 /* 4DPlugin-JSON.h in Headers */ = {isa = PBXBuildFile; fileRef = D16F321623442C8D0059DD21 /* 4DPlugin-JSON.h */; };
 		D16F321A23442CAC0059DD21 /* libjsoncpp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D16F321923442CAC0059DD21 /* libjsoncpp.a */; };
+		D1B8BF3A2344DABA00204895 /* DiskArbitration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D1B8BF392344DABA00204895 /* DiskArbitration.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -60,6 +61,7 @@
 		D16F321523442C8D0059DD21 /* 4DPlugin-JSON.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = "4DPlugin-JSON.cpp"; path = "support/4DPlugin-JSON.cpp"; sourceTree = "<group>"; };
 		D16F321623442C8D0059DD21 /* 4DPlugin-JSON.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "4DPlugin-JSON.h"; path = "support/4DPlugin-JSON.h"; sourceTree = "<group>"; };
 		D16F321923442CAC0059DD21 /* libjsoncpp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libjsoncpp.a; path = a/libjsoncpp.a; sourceTree = "<group>"; };
+		D1B8BF392344DABA00204895 /* DiskArbitration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DiskArbitration.framework; path = System/Library/Frameworks/DiskArbitration.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -67,6 +69,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D1B8BF3A2344DABA00204895 /* DiskArbitration.framework in Frameworks */,
 				D16F321A23442CAC0059DD21 /* libjsoncpp.a in Frameworks */,
 				D130064F12F02D9700702C0E /* Cocoa.framework in Frameworks */,
 			);
@@ -161,6 +164,7 @@
 		D16FBB3C22A4C07E008F0416 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D1B8BF392344DABA00204895 /* DiskArbitration.framework */,
 				D16F321923442CAC0059DD21 /* libjsoncpp.a */,
 			);
 			name = Frameworks;

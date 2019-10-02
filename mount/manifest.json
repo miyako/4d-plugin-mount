@@ -9,7 +9,7 @@
         },
         {
             "theme": "Mount",
-            "syntax": "Unmount(&T)",
+            "syntax": "Unmount(&T):T",
             "threadSafe": false
         },
         {

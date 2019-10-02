@@ -327,28 +327,41 @@ void listenerLoopExecuteMethod()
     
     NSDictionary *dict = [notification userInfo];
 
+    NSURL *volumeURL = [dict objectForKey:NSWorkspaceVolumeURLKey];
+    NSString *volumePath = (NSString *)CFURLCopyFileSystemPath((CFURLRef)volumeURL, kCFURLHFSPathStyle);
+    userInfo["volumePath"] = [volumePath UTF8String];
+    userInfo["volumeURL"] = [[volumeURL absoluteString]UTF8String];
+    [volumePath release];
+    
+    NSString *volumeLocalizedName = [dict objectForKey:NSWorkspaceVolumeLocalizedNameKey];
+    userInfo["volumeLocalizedName"] = [volumeLocalizedName UTF8String];
+    
+    NSURL *volumeOldURL;
+    NSString *volumeOldPath;
+ 
+    
+    
     switch (event)
     {
         case didMountNotificationEvent:
-            userInfo["volumeURL"] = [[[dict objectForKey:NSWorkspaceVolumeURLKey]absoluteString]UTF8String];
             userInfo["devicePath"] = [[dict objectForKey:@"NSDevicePath"]UTF8String];
-            userInfo["volumeLocalizedName"] = [[dict objectForKey:NSWorkspaceVolumeLocalizedNameKey]UTF8String];
             break;
+            
         case willUnmountNotificationEvent:
-            userInfo["volumeURL"] = [[[dict objectForKey:NSWorkspaceVolumeURLKey]absoluteString]UTF8String];
             userInfo["devicePath"] = [[dict objectForKey:@"NSDevicePath"]UTF8String];
-            userInfo["volumeLocalizedName"] = [[dict objectForKey:NSWorkspaceVolumeLocalizedNameKey]UTF8String];
             break;
+            
         case didUnmountNotificationEvent:
-            userInfo["volumeURL"] = [[[dict objectForKey:NSWorkspaceVolumeURLKey]absoluteString]UTF8String];
             userInfo["devicePath"] = [[dict objectForKey:@"NSDevicePath"]UTF8String];
-            userInfo["volumeLocalizedName"] = [[dict objectForKey:NSWorkspaceVolumeLocalizedNameKey]UTF8String];
             break;
+            
         case didRenameVolumeNotificationEvent:
-            userInfo["volumeURL"] = [[[dict objectForKey:NSWorkspaceVolumeURLKey]absoluteString]UTF8String];
-            userInfo["volumeLocalizedName"] = [[dict objectForKey:NSWorkspaceVolumeLocalizedNameKey]UTF8String];
-            userInfo["volumeOldURL"] = [[[dict objectForKey:NSWorkspaceVolumeOldURLKey]absoluteString]UTF8String];
             userInfo["volumeOldLocalizedName"] = [[dict objectForKey:NSWorkspaceVolumeOldLocalizedNameKey]UTF8String];
+            volumeOldURL = [dict objectForKey:NSWorkspaceVolumeOldURLKey];
+            volumeOldPath = (NSString *)CFURLCopyFileSystemPath((CFURLRef)volumeOldURL, kCFURLHFSPathStyle);
+            userInfo["volumeOldPath"] = [volumeOldPath UTF8String];
+            userInfo["volumeOldURL"] = [[volumeOldURL absoluteString]UTF8String];
+            [volumeOldPath release];
             break;
     }
     
@@ -421,9 +434,11 @@ void PluginMain(PA_long32 selector, PA_PluginParameters params) {
 				Mount_WATCH(params);
 				break;
 			case 2 :
-				Unmount(params);
+//                PA_RunInMainProcess((PA_RunInMainProcessProcPtr)Unmount, params);
+                Unmount(params);
 				break;
 			case 3 :
+//                PA_RunInMainProcess((PA_RunInMainProcessProcPtr)Mount, params);
 				Mount(params);
 				break;
 
@@ -465,11 +480,92 @@ void Mount_WATCH(PA_PluginParameters params) {
     
 }
 
-void Unmount(PA_PluginParameters params) {
+static void OnDiskUnmount(DADiskRef disk, DADissenterRef dissenter, void* context)
+{
+    if (dissenter)
+    {
+        // error
+    }
+    else
+    {
+        // success
+    }
+}
 
+void Unmount(PA_PluginParameters params) {
+    
+    sLONG_PTR *pResult = (sLONG_PTR *)params->fResult;
+    PackagePtr pParams = (PackagePtr)params->fParameters;
+    
+    C_TEXT t, r;
+    t.fromParamAtIndex(pParams, 1);
+    NSURL *url = t.copyUrl();
+    
+    if(url) {
+        DASessionRef session = DASessionCreate(kCFAllocatorDefault);
+        if(session) {
+            
+            DADiskRef diskRef = DADiskCreateFromVolumePath(kCFAllocatorDefault, session, (CFURLRef)url);
+            if(diskRef) {
+                
+                const char *BSDName = DADiskGetBSDName(diskRef);
+                
+                r.setUTF8String((const uint8_t *)BSDName, (uint32_t)strlen(BSDName));
+                r.setReturn(pResult);
+                
+                DADiskUnmount(diskRef,
+                            kDADiskUnmountOptionForce,
+                            OnDiskUnmount,
+                            NULL);
+                
+                CFRelease(diskRef);
+            }
+            CFRelease(session);
+        }
+        [url release];
+    }
+}
+
+static void OnDiskMount(DADiskRef disk, DADissenterRef dissenter, void* context)
+{
+    if (dissenter)
+    {
+        // error
+    }
+    else
+    {
+        // success
+    }
 }
 
 void Mount(PA_PluginParameters params) {
 
+    PackagePtr pParams = (PackagePtr)params->fParameters;
+    
+    C_TEXT t;
+    t.fromParamAtIndex(pParams, 1);
+    NSString *name = t.copyUTF16String();
+    
+    if(name) {
+        DASessionRef session = DASessionCreate(kCFAllocatorDefault);
+        if(session) {
+            
+            DADiskRef diskRef = DADiskCreateFromBSDName(kCFAllocatorDefault, session, [name UTF8String]);
+            
+            if(diskRef) {
+                
+                DADiskMount(diskRef,
+                            NULL,
+                            kDADiskMountOptionDefault,
+                            OnDiskMount,
+                            NULL);
+                
+                CFRelease(diskRef);
+            }
+            CFRelease(session);
+        }
+        [name release];
+    }
+ 
 }
 
