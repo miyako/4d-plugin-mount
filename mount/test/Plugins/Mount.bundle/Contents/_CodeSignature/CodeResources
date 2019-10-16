@@ -8,24 +8,20 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			FZBNRgCj899hgN26JaAFjlxJfdU=
+			6PPnHO27GUyE4jKekJygucAMdNc=
 			</data>
 			<key>optional</key>
 			<true/>
 		</dict>
 		<key>Resources/constants.xlf</key>
 		<data>
-		4bFFNUxr1LTtSd+dOz41LQ08rF0=
+		94jI1iNNu4SvrFLJGyDblVC5+ho=
 		</data>
 	</dict>
 	<key>files2</key>
 	<dict>
 		<key>QuickLook/Thumbnail.png</key>
 		<dict>
-			<key>hash</key>
-			<data>
-			hC+U8EqvyIRM1lLakHLfvl4V9Tc=
-			</data>
 			<key>hash2</key>
 			<data>
 			nGfrvibB5KlzvZgF4Bra+l0HpRloxismgTLePnOwCdk=
@@ -33,34 +29,22 @@
 		</dict>
 		<key>Resources/English.lproj/InfoPlist.strings</key>
 		<dict>
-			<key>hash</key>
-			<data>
-			FZBNRgCj899hgN26JaAFjlxJfdU=
-			</data>
 			<key>hash2</key>
 			<data>
-			RDyLRIJ/nurL1R61Xu763PM+UWd/kndKZwa0t0YVLBU=
+			uTmAJ2cac5FysoGMbfcDitgpMjCsfhnxtJLX2e3COXk=
 			</data>
 			<key>optional</key>
 			<true/>
 		</dict>
 		<key>Resources/constants.xlf</key>
 		<dict>
-			<key>hash</key>
-			<data>
-			4bFFNUxr1LTtSd+dOz41LQ08rF0=
-			</data>
 			<key>hash2</key>
 			<data>
-			UPea3Vdw1/n/TKhs9+ifOqa3IvLB4gbrDdgqUlKVxQw=
+			pr40Z0rkoFBXShk2svnWIpTbaJXxxJRJAA582sckRb4=
 			</data>
 		</dict>
 		<key>Windows/Mount.4DX</key>
 		<dict>
-			<key>hash</key>
-			<data>
-			hL9gqzB1pAgChKZ1uj+Jqt43yxs=
-			</data>
 			<key>hash2</key>
 			<data>
 			ZCCEqtPmUM+2iJDxTvuZrd5mchV7dH5Z4RZvNF7YQT0=
@@ -68,10 +52,6 @@
 		</dict>
 		<key>Windows64/Mount.4DX</key>
 		<dict>
-			<key>hash</key>
-			<data>
-			zvoZ7ULt+O/aKx6NzgaqTillGNg=
-			</data>
 			<key>hash2</key>
 			<data>
 			xZ0isPdvytfz/ISMhvmTet0RKxwRCg6HeDepN7N2icI=
@@ -81,10 +61,10 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			w+vspABD8xPU8porOHcVgpZ1EEA=
+			CeR+CS0ICuaAZHZjm4uqFl+JPi8=
 			</data>
 			<key>requirement</key>
-			<string>identifier manifest and anchor apple generic and certificate leaf[subject.CN] = "Mac Developer: keisuke miyako (4W9UT59D3B)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
+			<string>identifier manifest and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = Y69CWUC25B</string>
 		</dict>
 	</dict>
 	<key>rules</key>
