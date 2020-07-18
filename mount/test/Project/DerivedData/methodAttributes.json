@@ -1,64 +1,70 @@
 ﻿{
 	"methods": {
 		"mount_watch": {
-			"timeStamp": "2019-10-02T13:30:39.936Z",
+			"timeStamp": "2020-03-09T01:20:50.997Z",
 			"attributes": {
 				"invisible": true
 			}
 		},
+		"TEST_crash": {
+			"timeStamp": "2020-07-18T05:37:29.818Z"
+		},
 		"generate_file_from_template": {
-			"timeStamp": "2019-07-29T04:26:04.720Z",
+			"timeStamp": "2020-03-09T01:20:50.996Z",
 			"attributes": {
 				"invisible": true,
 				"preemptive": "capable"
 			}
 		},
 		"generate_project_infoplist": {
-			"timeStamp": "2019-07-02T13:51:21.000Z",
+			"timeStamp": "2020-03-09T01:20:50.996Z",
 			"attributes": {
 				"invisible": true,
 				"preemptive": "capable"
 			}
 		},
 		"generate_constants_xlf": {
-			"timeStamp": "2019-07-29T04:26:04.177Z",
+			"timeStamp": "2020-03-09T01:20:50.996Z",
 			"attributes": {
 				"invisible": true,
 				"preemptive": "capable"
 			}
 		},
 		"generate_project_xcode": {
-			"timeStamp": "2019-07-02T13:57:13.000Z",
+			"timeStamp": "2020-03-09T01:20:50.997Z",
 			"attributes": {
 				"invisible": true,
 				"preemptive": "capable"
 			}
 		},
 		"TEST": {
-			"timeStamp": "2019-10-02T00:31:29.506Z"
+			"timeStamp": "2020-03-09T01:20:50.996Z"
+		},
+		"TEST_worker": {
+			"timeStamp": "2020-07-18T05:37:40.661Z"
 		},
 		"generate_project": {
-			"timeStamp": "2019-10-01T23:23:02.721Z"
+			"timeStamp": "2020-03-09T01:20:50.996Z"
 		},
 		"generate_project_vs": {
-			"timeStamp": "2019-07-24T08:49:03.338Z",
+			"timeStamp": "2020-03-09T01:20:50.997Z",
 			"attributes": {
 				"invisible": true,
 				"preemptive": "capable"
 			}
 		},
 		"TEST_1": {
-			"timeStamp": "2019-10-02T14:05:47.383Z"
+			"timeStamp": "2020-03-09T01:20:50.996Z"
 		},
 		"generate_project_plugin_stub": {
-			"timeStamp": "2019-07-23T08:36:58.000Z",
+			"timeStamp": "2020-03-09T01:20:50.997Z",
 			"attributes": {
 				"invisible": true,
 				"preemptive": "capable"
 			}
 		},
 		"generate_project_source": {
-			"timeStamp": "2019-07-02T14:36:13.000Z",
+			"timeStamp": "2020-03-09T01:20:50.997Z",
 			"attributes": {
 				"invisible": true,
 				"preemptive": "capable"

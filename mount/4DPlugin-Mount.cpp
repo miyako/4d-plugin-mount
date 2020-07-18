@@ -386,12 +386,14 @@ void listenerLoopExecuteMethod()
 
 @end
 
-#define MAX_PROCESS_NAME 33
+#define MAX_PROCESS_NAME 1024
 
 bool IsProcessOnExit()
 {
     PA_long32 state, time;
     PA_Unichar name[MAX_PROCESS_NAME];
+    memset(name, 0x0, sizeof(PA_Unichar) * MAX_PROCESS_NAME);
+    
     PA_long32 currentProcessNumber = PA_GetCurrentProcessNumber();
     PA_GetProcessInfo(currentProcessNumber, name, &state, &time);
     CUTF16String procName(name);
