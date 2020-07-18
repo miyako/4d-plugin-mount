@@ -391,15 +391,17 @@ void listenerLoopExecuteMethod()
 bool IsProcessOnExit()
 {
     PA_long32 state, time;
-    PA_Unichar name[MAX_PROCESS_NAME];
-    memset(name, 0x0, sizeof(PA_Unichar) * MAX_PROCESS_NAME);
     
     PA_long32 currentProcessNumber = PA_GetCurrentProcessNumber();
-    PA_GetProcessInfo(currentProcessNumber, name, &state, &time);
-    CUTF16String procName(name);
+    PA_Variable name = PA_GetProcessInfo_s(currentProcessNumber, &state, &time);
+    PA_Unistring u = PA_GetStringVariable(name);
+    CUTF16String procName(u.fString, u.fLength);
     PA_Unichar _exitProcName[] = {'$', 'x', 'x', 0};
     CUTF16String exitProcName((PA_Unichar *)_exitProcName);
-    return (!procName.compare(exitProcName));
+    bool isProcessOnExit = (!procName.compare(exitProcName));
+    PA_ClearVariable(&name);
+    
+    return isProcessOnExit;
 }
 
 void OnStartup()
