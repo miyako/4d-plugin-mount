@@ -43,16 +43,20 @@ namespace mount
 
 void listener_start()
 {
-    if(!mount::listener)
-    {
-        mount::listener = [[Listener alloc]init];
+    @autoreleasepool {
+        if(!mount::listener)
+        {
+            mount::listener = [[Listener alloc]init];
+        }
     }
 }
 
 void listener_end()
 {
-    [mount::listener release];
-    mount::listener = nil;
+    @autoreleasepool {
+        [mount::listener release];
+        mount::listener = nil;
+    }
 }
 
 void listenerLoop()
@@ -218,6 +222,9 @@ void listenerLoopExecuteMethod()
     {
         std::lock_guard<std::mutex> lock(globalMutex);
         
+        if(mount::USER_INFO.empty())
+            return;
+        
         std::vector<CUTF16String>::iterator p;
         
         p = mount::USER_INFO.begin();
@@ -233,7 +240,8 @@ void listenerLoopExecuteMethod()
     {
         PA_Variable    params[1];
         
-        params[0] = PA_CreateVariable(eVK_Unistring);
+        /* eVK_Undefined: PA_SetStringVariable overwrites without disposing, so an eVK_Unistring variable would leak its empty string */
+        params[0] = PA_CreateVariable(eVK_Undefined);
         PA_Unistring userInfo = PA_CreateUnistring((PA_Unichar *)USER_INFO.c_str());
         PA_SetStringVariable(&params[0], &userInfo);
         
@@ -244,11 +252,11 @@ void listenerLoopExecuteMethod()
     {
         PA_Variable    params[2];
         
-        params[1] = PA_CreateVariable(eVK_Unistring);
+        params[1] = PA_CreateVariable(eVK_Undefined);
         PA_Unistring userInfo = PA_CreateUnistring((PA_Unichar *)USER_INFO.c_str());
         PA_SetStringVariable(&params[1], &userInfo);
 
-        params[0] = PA_CreateVariable(eVK_Unistring);
+        params[0] = PA_CreateVariable(eVK_Undefined);
         PA_Unistring method = PA_CreateUnistring((PA_Unichar *)mount::LISTENER_METHOD.getUTF16StringPtr());
         PA_SetStringVariable(&params[0], &method);
         
@@ -256,6 +264,41 @@ void listenerLoopExecuteMethod()
         PA_ClearVariable(&params[0]);
         PA_ClearVariable(&params[1]);
     }
+}
+
+/* nil (or a non-string) becomes "": Json::Value(const char *) would call strlen(NULL) */
+static std::string ns_to_utf8(id value)
+{
+    if(value && [value isKindOfClass:[NSString class]])
+    {
+        const char *u = [(NSString *)value UTF8String];
+        if(u) return std::string(u);
+    }
+    return std::string();
+}
+
+static std::string hfs_path(NSURL *url)
+{
+    std::string path;
+    if(url && [url isKindOfClass:[NSURL class]])
+    {
+        NSString *p = (NSString *)CFURLCopyFileSystemPath((CFURLRef)url, kCFURLHFSPathStyle);
+        if(p)
+        {
+            path = ns_to_utf8(p);
+            [p release];
+        }
+    }
+    return path;
+}
+
+static std::string url_string(NSURL *url)
+{
+    if(url && [url isKindOfClass:[NSURL class]])
+    {
+        return ns_to_utf8([url absoluteString]);
+    }
+    return std::string();
 }
 
 @implementation Listener
@@ -322,66 +365,71 @@ void listenerLoopExecuteMethod()
 
 - (void)call:(mount_event_id_t)event notification:(NSNotification *)notification
 {
-    Json::Value userInfo;
-    userInfo["type"] = event;
-    
-    NSDictionary *dict = [notification userInfo];
-
-    NSURL *volumeURL = [dict objectForKey:NSWorkspaceVolumeURLKey];
-    NSString *volumePath = (NSString *)CFURLCopyFileSystemPath((CFURLRef)volumeURL, kCFURLHFSPathStyle);
-    userInfo["volumePath"] = [volumePath UTF8String];
-    userInfo["volumeURL"] = [[volumeURL absoluteString]UTF8String];
-    [volumePath release];
-    
-    NSString *volumeLocalizedName = [dict objectForKey:NSWorkspaceVolumeLocalizedNameKey];
-    userInfo["volumeLocalizedName"] = [volumeLocalizedName UTF8String];
-    
-    NSURL *volumeOldURL;
-    NSString *volumeOldPath;
- 
-    
-    
-    switch (event)
-    {
-        case didMountNotificationEvent:
-            userInfo["devicePath"] = [[dict objectForKey:@"NSDevicePath"]UTF8String];
-            break;
+    /* runs on the main thread from the notification center, outside PluginMain's try/catch */
+    try {
+        
+        Json::Value userInfo;
+        userInfo["type"] = event;
+        
+        NSDictionary *dict = [notification userInfo];
+        
+        NSURL *volumeURL = [dict objectForKey:NSWorkspaceVolumeURLKey];
+        userInfo["volumePath"] = hfs_path(volumeURL);
+        userInfo["volumeURL"] = url_string(volumeURL);
+        userInfo["volumeLocalizedName"] = ns_to_utf8([dict objectForKey:NSWorkspaceVolumeLocalizedNameKey]);
+        
+        NSURL *volumeOldURL;
+        
+        switch (event)
+        {
+            case didMountNotificationEvent:
+                userInfo["devicePath"] = ns_to_utf8([dict objectForKey:@"NSDevicePath"]);
+                break;
+                
+            case willUnmountNotificationEvent:
+                userInfo["devicePath"] = ns_to_utf8([dict objectForKey:@"NSDevicePath"]);
+                break;
+                
+            case didUnmountNotificationEvent:
+                userInfo["devicePath"] = ns_to_utf8([dict objectForKey:@"NSDevicePath"]);
+                break;
+                
+            case didRenameVolumeNotificationEvent:
+                userInfo["volumeOldLocalizedName"] = ns_to_utf8([dict objectForKey:NSWorkspaceVolumeOldLocalizedNameKey]);
+                volumeOldURL = [dict objectForKey:NSWorkspaceVolumeOldURLKey];
+                userInfo["volumeOldPath"] = hfs_path(volumeOldURL);
+                userInfo["volumeOldURL"] = url_string(volumeOldURL);
+                break;
+        }
+        
+        Json::StreamWriterBuilder builder;
+        std::string json = Json::writeString(builder, userInfo);
+        
+        CFStringRef str = CFStringCreateWithBytes(kCFAllocatorDefault,
+                                                  (const UInt8 *)json.c_str(),
+                                                  json.length(),
+                                                  kCFStringEncodingUTF8, true);
+        if(str){
+            CFIndex len = CFStringGetLength(str);
+            std::vector<uint8_t> buf((len+1) * sizeof(PA_Unichar));
+            CFStringGetCharacters(str, CFRangeMake(0, len), (UniChar *)&buf[0]);
+            CUTF16String u((const PA_Unichar *)&buf[0], (size_t)len);
+            CFRelease(str);
             
-        case willUnmountNotificationEvent:
-            userInfo["devicePath"] = [[dict objectForKey:@"NSDevicePath"]UTF8String];
-            break;
+            if(1)
+            {
+                /* the listener process pops this queue under the same lock */
+                std::lock_guard<std::mutex> lock(globalMutex);
+                
+                mount::USER_INFO.push_back(u);
+            }
             
-        case didUnmountNotificationEvent:
-            userInfo["devicePath"] = [[dict objectForKey:@"NSDevicePath"]UTF8String];
-            break;
-            
-        case didRenameVolumeNotificationEvent:
-            userInfo["volumeOldLocalizedName"] = [[dict objectForKey:NSWorkspaceVolumeOldLocalizedNameKey]UTF8String];
-            volumeOldURL = [dict objectForKey:NSWorkspaceVolumeOldURLKey];
-            volumeOldPath = (NSString *)CFURLCopyFileSystemPath((CFURLRef)volumeOldURL, kCFURLHFSPathStyle);
-            userInfo["volumeOldPath"] = [volumeOldPath UTF8String];
-            userInfo["volumeOldURL"] = [[volumeOldURL absoluteString]UTF8String];
-            [volumeOldPath release];
-            break;
+            listenerLoopExecute();
+        }
+        
+    } catch (...) {
+        
     }
-    
-    Json::StreamWriterBuilder builder;
-    std::string json = Json::writeString(builder, userInfo);
-    
-    CFStringRef str = CFStringCreateWithBytes(kCFAllocatorDefault,
-                                              (const UInt8 *)json.c_str(),
-                                              json.length(),
-                                              kCFStringEncodingUTF8, true);
-    if(str){
-        CFIndex len = CFStringGetLength(str);
-        std::vector<uint8_t> buf((len+1) * sizeof(PA_Unichar));
-        CFStringGetCharacters(str, CFRangeMake(0, len), (UniChar *)&buf[0]);
-        CUTF16String u((const PA_Unichar *)&buf[0]);
-        CFRelease(str);
-        mount::USER_INFO.push_back(u);
-        listenerLoopExecute();
-    }
-
 }
 
 @end
@@ -503,6 +551,9 @@ void Unmount(PA_PluginParameters params) {
     
     C_TEXT t, r;
     t.fromParamAtIndex(pParams, 1);
+    
+    @autoreleasepool {
+    
     NSURL *url = t.copyUrl();
     
     if(url) {
@@ -514,7 +565,10 @@ void Unmount(PA_PluginParameters params) {
                 
                 const char *BSDName = DADiskGetBSDName(diskRef);
                 
-                r.setUTF8String((const uint8_t *)BSDName, (uint32_t)strlen(BSDName));
+                /* NULL for volumes without a BSD device (e.g. network shares) */
+                if(BSDName) {
+                    r.setUTF8String((const uint8_t *)BSDName, (uint32_t)strlen(BSDName));
+                }
                 r.setReturn(pResult);
                 
                 DADiskUnmount(diskRef,
@@ -527,6 +581,8 @@ void Unmount(PA_PluginParameters params) {
             CFRelease(session);
         }
         [url release];
+    }
+    
     }
 }
 
@@ -548,6 +604,9 @@ void Mount(PA_PluginParameters params) {
     
     C_TEXT t;
     t.fromParamAtIndex(pParams, 1);
+    
+    @autoreleasepool {
+    
     NSString *name = t.copyUTF16String();
     
     if(name) {
@@ -570,6 +629,7 @@ void Mount(PA_PluginParameters params) {
         }
         [name release];
     }
- 
+    
+    }
 }
 
