@@ -1,1 +1,10 @@
-mount/build/*
+.DS_Store
+build/
+test/Data/Logs/
+test/Logs/
+test/userPreferences.*
+test/Project/DerivedData/
+test/Plugins/Mount.bundle/Contents/MacOS/
+test/Plugins/Mount.bundle/Contents/_CodeSignature/
+/Mount.dmg
+/Mount.zip
