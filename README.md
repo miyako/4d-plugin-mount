@@ -207,4 +207,6 @@ Mount WATCH ("")  // stop
 
 [Releases](https://github.com/miyako/4d-plugin-mount/releases)
 
+Maintainers: [manual Bump and Build workflows](.github/README.md).
+
 Older documentation: [miyako.github.io](https://miyako.github.io/2019/10/02/4d-plugin-mount)
