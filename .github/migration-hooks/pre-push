@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+"""Permit one migration-branch creation or explicit direct-child correction."""
+
+import os
+from pathlib import Path
+import re
+import sys
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+import repository
+
+
+try:
+    sha = os.environ["MIGRATION_SHA"]
+    ref = os.environ["MIGRATION_REF"]
+    old = os.environ.get("MIGRATION_OLD_SHA", "0" * 40)
+    if not all(re.fullmatch(r"[0-9a-f]{40}", value) for value in (sha, old)) or ref != \
+            "refs/heads/miyako-simplify-mount-workflows":
+        raise ValueError("Unexpected migration SHA/ref")
+    repository.verify_checkout(sha)
+    if old != "0" * 40 and repository.run(
+        "git", "rev-list", "--parents", "-n", "1", sha
+    ) != f"{sha} {old}":
+        raise ValueError("Migration correction must be one direct child of expected old SHA")
+    rows = sys.stdin.read().splitlines()
+    if rows not in (
+        [f"{sha} {sha} {ref} {old}"],
+        [f"HEAD {sha} {ref} {old}"],
+    ):
+        raise ValueError("Expected exactly one literal migration branch old/new advertisement")
+    message = repository.run("git", "log", "-1", "--format=%B", sha).rstrip()
+    if not message.endswith(
+        "Co-authored-by: Copilot App <223556219+Copilot@users.noreply.github.com>"
+    ):
+        raise ValueError("Migration commit requires literal ending co-author trailer")
+    print("Validated actual migration advertisement: " + rows[0], file=sys.stderr)
+except (KeyError, ValueError, OSError) as error:
+    sys.exit(f"Migration push stopped: {error}")
