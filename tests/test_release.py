@@ -118,7 +118,7 @@ class AvailabilityTests(GitFixture):
             api.api("POST", UPLOAD, asset=Path("Mount-3.2.1.zip"))
             self.assertIn("Content-Type: application/octet-stream", run.call_args.args[0])
         for code, output in ((1, "[]"), (0, "invalid"), (0, '{"id":1,"id":2}'),
-                             (0, "[NaN]"), (0, "[Infinity]")):
+                             (0, "[NaN]"), (0, "[Infinity]"), (0, "[1e999]")):
             with patch.object(subprocess, "run", return_value=subprocess.CompletedProcess(
                     [], code, output, "offline failure")) as run:
                 with self.assertRaises(ValueError):
@@ -450,6 +450,29 @@ class PublicationCLITests(GitFixture):
         directory.rename(moved)
         directory.symlink_to(moved, target_is_directory=True)
         self.assertNotEqual(self.command("publish").returncode, 0)
+        self.assertEqual(self.calls(), [])
+
+    def test_final_generated_file_and_intermediate_symlinks_fail_before_api(self):
+        self.build()
+        for index, name in enumerate(self.generated):
+            with self.subTest(path=name):
+                target = self.local / name
+                saved = self.root / f"retained-generated-{index}"
+                target.rename(saved)
+                target.symlink_to(saved)
+                result = self.command("publish")
+                self.assertNotEqual(result.returncode, 0, result.stdout)
+                self.assertIn("symlink", result.stderr)
+                self.assertEqual(self.calls(), [])
+                target.unlink()
+                saved.rename(target)
+        directory = self.local / "build/XCBuildData"
+        moved = self.root / "retained-generated-database"
+        directory.rename(moved)
+        directory.symlink_to(moved, target_is_directory=True)
+        result = self.command("publish")
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertIn("symlink", result.stderr)
         self.assertEqual(self.calls(), [])
 
     def test_raw_bytes_are_not_hidden_by_a_git_clean_filter(self):

@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -47,6 +48,13 @@ def invalid_constant(value):
     raise ValueError(f"Invalid JSON constant: {value}")
 
 
+def finite_float(value):
+    result = float(value)
+    if not math.isfinite(result):
+        raise ValueError(f"Nonfinite JSON number: {value}")
+    return result
+
+
 class GitHub:
     def api(self, method, endpoint, payload=None, asset=None):
         command = ["gh", "api", "--method", method, endpoint,
@@ -63,7 +71,7 @@ class GitHub:
             require(result.returncode == 0,
                     f"{method} {endpoint}: gh failed: {result.stderr.strip()}")
             return json.loads(result.stdout, object_pairs_hook=json_object,
-                              parse_constant=invalid_constant)
+                              parse_constant=invalid_constant, parse_float=finite_float)
         except (OSError, UnicodeError, json.JSONDecodeError) as error:
             raise ReleaseError(f"{method} {endpoint}: transport/JSON failure: {error}") from error
 
@@ -134,6 +142,8 @@ def context(sha, *, final=False):
     require(os.environ.get("GITHUB_SHA") == sha, "--sha must match immutable GITHUB_SHA")
     repository.selected_sha(sha)
     version = source_version.read()
+    if final:
+        native.validate_paths((*native.FILES, *native.DIRECTORIES))
     repository.verify_checkout(sha, generated=native.generated,
                                assets=asset_names(version), final=final)
     if final:
