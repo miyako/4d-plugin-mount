@@ -1,4 +1,4 @@
-"""The production migration push permits one new branch, never tags or updates."""
+"""Migration pushes permit one new branch or one explicit direct-child correction."""
 
 import os
 import subprocess
@@ -42,4 +42,33 @@ class MigrationGuardTests(GitFixture):
         self.assertNotEqual(again.returncode, 0, again.stderr)
         self.assertEqual(self.git("--git-dir=" + str(self.bare), "rev-parse",
                                   self.migration_ref), self.sha)
+        self.assertEqual(self.git("--git-dir=" + str(self.bare), "tag", "--list"), "")
+
+    def test_actual_guarded_direct_child_correction_and_exact_old_required(self):
+        self.git("-c", "push.followTags=false", "push", "--quiet", "--no-follow-tags",
+                 "origin", f"{self.sha}:{self.migration_ref}")
+        (self.local / "review-fix.txt").write_text("narrow review correction\n")
+        self.git("add", "--", "review-fix.txt")
+        self.git("commit", "--quiet", "-m", "review correction")
+        new = self.git("rev-parse", "HEAD")
+        values = {**self.values, "MIGRATION_SHA": new, "MIGRATION_OLD_SHA": self.sha}
+        row = f"{new} {new} {self.migration_ref} {self.sha}\n"
+        self.assertEqual(self.invoke(row, values).returncode, 0)
+        for invalid in ("", row * 2, row.replace(self.sha, self.ancestor),
+                        row.replace(self.migration_ref, "refs/tags/unrelated")):
+            self.assertNotEqual(self.invoke(invalid, values).returncode, 0)
+        for old in (self.ancestor, new, "invalid"):
+            self.assertNotEqual(self.invoke(row, {**values, "MIGRATION_OLD_SHA": old}).returncode, 0)
+        command = ["git", "-c", f"core.hooksPath={self.guard.parent}", "-c",
+                   "push.followTags=false", "push", "--no-follow-tags", "--porcelain",
+                   "origin", f"{new}:{self.migration_ref}"]
+        result = subprocess.run(command, cwd=self.local, env=values,
+                                text=True, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Validated actual migration advertisement: " + row.strip(), result.stderr)
+        again = subprocess.run(command, cwd=self.local, env=values,
+                               text=True, capture_output=True)
+        self.assertNotEqual(again.returncode, 0)
+        self.assertEqual(self.git("--git-dir=" + str(self.bare), "rev-parse",
+                                  self.migration_ref), new)
         self.assertEqual(self.git("--git-dir=" + str(self.bare), "tag", "--list"), "")

@@ -2,6 +2,7 @@
 
 import argparse
 from pathlib import Path
+import re
 import shutil
 
 
@@ -26,8 +27,14 @@ DIRECTORIES = (
 
 
 def generated(path):
-    return (path in set(map(str, FILES))
-            or any(path.startswith(str(directory) + "/") for directory in DIRECTORIES))
+    matched = (path in set(map(str, FILES))
+               or path in {f"build/XCBuildData/build.db{suffix}"
+                           for suffix in ("", "-wal", "-shm")}
+               or re.fullmatch(r"build/XCBuildData/[0-9a-f]{32}\.xcbuilddata/.+", path) is not None
+               or any(path.startswith(str(directory) + "/") for directory in DIRECTORIES[1:]))
+    if matched:
+        validate_paths((Path(path),))
+    return matched
 
 
 def validate_paths(paths):
@@ -59,6 +66,12 @@ def require_file(path):
     validate_paths((path,))
     if not path.is_file() or path.stat().st_size == 0:
         raise ValueError(f"Missing or empty native output: {path}")
+
+
+def validate_outputs():
+    validate_paths((*FILES, *DIRECTORIES))
+    for path in FILES:
+        require_file(path)
 
 
 def verify_resources():

@@ -143,11 +143,11 @@ def context(sha, *, final=False):
     repository.selected_sha(sha)
     version = source_version.read()
     if final:
-        native.validate_paths((*native.FILES, *native.DIRECTORIES))
+        native.validate_outputs()
     repository.verify_checkout(sha, generated=native.generated,
                                assets=asset_names(version), final=final)
     if final:
-        source_version.verify_bundle(native.BUNDLE)
+        native.verify_resources()
     return version, "v" + version
 
 

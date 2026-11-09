@@ -38,7 +38,8 @@ class NativePreparationTests(Fixture):
 
     def test_symlink_anywhere_prevalidated_before_first_deletion(self):
         for where in (native.FILES[-1], native.FILES[-2], native.DIRECTORIES[-1], native.BUNDLE,
-                      native.DIRECTORIES[0] / "nested/link"):
+                      native.DIRECTORIES[0] /
+                      "43cb86982ef48addb679abbcf73e7bf0.xcbuilddata/nested/link"):
             with self.subTest(where=where):
                 first = self.write(native.FILES[0], b"must remain")
                 destination = self.write("outside/keep", b"untouched")
@@ -84,6 +85,51 @@ class NativePreparationTests(Fixture):
             with self.assertRaisesRegex(ValueError, "built metadata"):
                 native.verify_resources()
 
+    def test_final_generated_predicate_rejects_file_and_ancestor_symlinks(self):
+        destination = self.write("outside/keep", b"unchanged")
+        for where in (*native.FILES, native.BUNDLE,
+                      native.DIRECTORIES[0] /
+                      "43cb86982ef48addb679abbcf73e7bf0.xcbuilddata/nested/link"):
+            with self.subTest(where=where):
+                link = self.root / where
+                if link.is_dir():
+                    shutil.rmtree(link)
+                link.parent.mkdir(parents=True, exist_ok=True)
+                link.symlink_to(destination)
+                candidate = (str(native.FILES[0]) if where == native.BUNDLE else str(where))
+                with cwd(self.root), self.assertRaisesRegex(ValueError, "symlink"):
+                    native.generated(candidate)
+                link.unlink()
+                self.assertEqual(destination.read_bytes(), b"unchanged")
+
+    def test_final_validation_requires_regular_nonempty_outputs_and_retains_bytes(self):
+        for path in native.FILES:
+            self.write(path, b"retained native bytes")
+        with cwd(self.root):
+            native.validate_outputs()
+        for path in native.FILES:
+            self.assertEqual((self.root / path).read_bytes(), b"retained native bytes")
+        binary = self.root / native.FILES[0]
+        binary.write_bytes(b"")
+        with cwd(self.root), self.assertRaisesRegex(ValueError, "Missing or empty"):
+            native.validate_outputs()
+        binary.unlink()
+        with cwd(self.root), self.assertRaisesRegex(ValueError, "Missing or empty"):
+            native.validate_outputs()
+
+    def test_final_validation_prevalidates_all_generated_directories(self):
+        for path in native.FILES:
+            self.write(path, b"retained native bytes")
+        destination = self.write("outside/keep", b"unchanged")
+        self.write(native.DIRECTORIES[0] / "build.db", b"fresh database")
+        link = self.root / native.DIRECTORIES[-1] / "nested/link"
+        link.parent.mkdir(parents=True, exist_ok=True)
+        link.symlink_to(destination)
+        with cwd(self.root), self.assertRaisesRegex(ValueError, "symlink"):
+            native.validate_outputs()
+        self.assertEqual(destination.read_bytes(), b"unchanged")
+        self.assertEqual((self.root / native.FILES[0]).read_bytes(), b"retained native bytes")
+
 
 class GeneratedRetentionTests(GitFixture):
     def setUp(self):
@@ -98,7 +144,7 @@ class GeneratedRetentionTests(GitFixture):
             *native.FILES,
             "build/XCBuildData/build.db", "build/XCBuildData/build.db-wal",
             "build/XCBuildData/build.db-shm",
-            "build/XCBuildData/abc.xcbuilddata/build-request.json",
+            "build/XCBuildData/43cb86982ef48addb679abbcf73e7bf0.xcbuilddata/build-request.json",
             "build/Mount.build/Default/Mount.build/Objects-normal/arm64/main.o",
             "build/Default/Mount.build/main.o",
             "test/Plugins/Mount.build/main.o",
@@ -139,6 +185,9 @@ class GeneratedRetentionTests(GitFixture):
     def test_evil_siblings_and_protected_resource_never_gain_final_exemption(self):
         for relative in (
             "build/XCBuildData-evil/build.db",
+            "build/XCBuildData/unexpected-source.cpp",
+            "build/XCBuildData/build.db-evil",
+            "build/XCBuildData/evil.xcbuilddata/source.cpp",
             "build/Mount.build-evil/main.o", "build/unexpected-source.cpp",
             "Objs/Release/main.obj", "winbuild/Mount.4DX",
             "test/Plugins/Default/keep", "test/Plugins/Other.bundle/Contents/Info.plist",

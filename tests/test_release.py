@@ -278,10 +278,16 @@ class PublicationCLITests(GitFixture):
             self.generated[2]: source.text(self.local / source.LOCALIZED).encode("utf-16"),
             self.generated[-1]: b"fresh signature bytes",
             "build/XCBuildData/build.db": b"fresh Xcode build database",
+            "build/XCBuildData/build.db-wal": b"fresh Xcode WAL",
+            "build/XCBuildData/build.db-shm": b"fresh Xcode shared memory",
+            "build/XCBuildData/43cb86982ef48addb679abbcf73e7bf0.xcbuilddata/build-request.json":
+                b"fresh Xcode build request",
             "build/Default/Mount.build/build.db": b"fresh intermediate",
         }
-        data.update({path: b"fresh native copied output"
-                     for path in self.generated[3:-1]})
+        data.update({
+            str(native.BUNDLE / "Contents/Resources" / name): self.baseline[name]
+            for name in ("manifest.json", "constants.xlf")
+        })
         for path, raw in data.items():
             target = self.local / path
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -329,11 +335,21 @@ class PublicationCLITests(GitFixture):
         database.unlink()
 
         expected = self.build()
-        unexpected = self.local / "build/unexpected-source.cpp"
-        unexpected.write_bytes(b"ignored source is not a generated database")
-        self.assertNotEqual(self.command("publish").returncode, 0)
-        self.assertEqual(self.calls(), [])
-        unexpected.unlink()
+        for name in ("build/unexpected-source.cpp",
+                     "build/XCBuildData/unexpected-source.cpp",
+                     "build/XCBuildData/build.db-evil",
+                     "build/XCBuildData/evil.xcbuilddata/source.cpp"):
+            with self.subTest(path=name):
+                unexpected = self.local / name
+                unexpected.parent.mkdir(parents=True, exist_ok=True)
+                unexpected.write_bytes(b"ignored source is not a generated database")
+                self.assertEqual(self.git("check-ignore", "--", name), name)
+                for phase in ("check", "publish"):
+                    result = self.command(phase)
+                    self.assertNotEqual(result.returncode, 0, result.stdout)
+                    self.assertIn("Untracked source/config", result.stderr)
+                    self.assertEqual(self.calls(), [])
+                unexpected.unlink()
         config = self.local / ".gitignore"
         config.write_bytes(self.baseline[".gitignore"] + b"unexpected-config\n")
         self.git("add", "--", ".gitignore")
@@ -344,7 +360,8 @@ class PublicationCLITests(GitFixture):
 
         result = self.command("publish")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(database.read_bytes(), expected[relative])
+        for path, raw in expected.items():
+            self.assertEqual((self.local / path).read_bytes(), raw)
         self.assertEqual(self.git("check-ignore", "--", relative), relative)
         self.assertEqual(self.git("rev-parse", "HEAD"), self.sha)
         for path, raw in self.baseline.items():
@@ -397,6 +414,32 @@ class PublicationCLITests(GitFixture):
             self.assertEqual(self.calls(), [])
             self.git("update-index", "--no-" + flag, "--", self.generated[0])
 
+    def test_staged_generated_bytes_and_modes_fail_before_api_without_resetting_outputs(self):
+        expected = self.build()
+        for path in self.generated:
+            for mutation in ("bytes", "mode"):
+                with self.subTest(path=path, mutation=mutation):
+                    self.reset_api()
+                    target = self.local / path
+                    if mutation == "bytes":
+                        target.write_bytes(expected[path] + b" staged mutation")
+                        self.git("add", "--", path)
+                        target.write_bytes(expected[path])
+                    else:
+                        self.git("update-index", "--chmod=+x", "--", path)
+                    result = self.command("publish")
+                    self.assertNotEqual(result.returncode, 0, result.stdout)
+                    self.assertIn("Index source/config differs", result.stderr)
+                    self.assertEqual(self.calls(), [])
+                    for relative, raw in expected.items():
+                        self.assertEqual((self.local / relative).read_bytes(), raw)
+                    self.git("restore", "--source=" + self.sha, "--staged", "--", path)
+                    self.assertEqual(self.git("diff", "--cached", "--name-only"), "")
+        result = self.command("publish")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for path, raw in expected.items():
+            self.assertEqual((self.local / path).read_bytes(), raw)
+
     def test_final_builtin_metadata_drift_missing_or_invalid_fails_before_api(self):
         self.build()
         for path in self.generated[1:3]:
@@ -412,6 +455,30 @@ class PublicationCLITests(GitFixture):
                     self.assertNotEqual(result.returncode, 0)
                     self.assertEqual(self.calls(), [])
                     target.write_bytes(saved)
+
+    def test_late_copied_resource_drift_missing_or_empty_fails_before_api(self):
+        self.assertEqual(self.command("preflight").returncode, 0)
+        self.reset_api()
+        expected = self.build()
+        for name in ("manifest.json", "constants.xlf"):
+            target = self.local / native.BUNDLE / "Contents/Resources" / name
+            saved = target.read_bytes()
+            self.assertEqual(saved, (self.local / name).read_bytes())
+            for raw in (b"late copied resource drift", b"", None):
+                with self.subTest(name=name, raw=raw):
+                    if raw is None:
+                        target.unlink()
+                    else:
+                        target.write_bytes(raw)
+                    for phase in ("check", "publish"):
+                        result = self.command(phase)
+                        self.assertNotEqual(result.returncode, 0, result.stdout)
+                        self.assertEqual(self.calls(), [])
+                    target.write_bytes(saved)
+        result = self.command("publish")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for path, raw in expected.items():
+            self.assertEqual((self.local / path).read_bytes(), raw)
 
     def test_untracked_ignored_source_config_and_unproven_outputs_fail_before_api(self):
         self.build()
@@ -499,7 +566,7 @@ class PublicationCLITests(GitFixture):
 
     def test_every_controlled_intermediate_is_allowed_but_siblings_are_not(self):
         self.build()
-        for directory in native.DIRECTORIES:
+        for directory in native.DIRECTORIES[1:]:
             path = self.local / directory / "nested/generated"
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(b"controlled output")
