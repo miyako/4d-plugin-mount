@@ -348,6 +348,7 @@ bool ob_get_a(PA_ObjectRef obj, const wchar_t *_key, CUTF8String *value) {
                 }
 #endif
             }
+            PA_ClearVariable(&v);
         }
 
         PA_DisposeUnistring(&key);
@@ -373,6 +374,7 @@ bool ob_get_b(PA_ObjectRef obj, const wchar_t *_key) {
             {
                 value = PA_GetBooleanVariable(v);
             }
+            PA_ClearVariable(&v);
         }
 
         PA_DisposeUnistring(&key);
@@ -398,6 +400,7 @@ double ob_get_n(PA_ObjectRef obj, const wchar_t *_key) {
             {
                 value = PA_GetRealVariable(v);
             }
+            PA_ClearVariable(&v);
         }
 
         PA_DisposeUnistring(&key);
@@ -422,6 +425,8 @@ PA_CollectionRef ob_get_c(PA_ObjectRef obj, const wchar_t *_key) {
             if(PA_GetVariableKind(v) == eVK_Collection)
             {
                 value = PA_GetCollectionVariable(v);
+            }else{
+                PA_ClearVariable(&v);
             }
         }
 
@@ -446,6 +451,8 @@ PA_ObjectRef ob_get_o(PA_ObjectRef obj, const wchar_t *_key) {
             if(PA_GetVariableKind(v) == eVK_Object)
             {
                 value = PA_GetObjectVariable(v);
+            }else{
+                PA_ClearVariable(&v);
             }
         }
 

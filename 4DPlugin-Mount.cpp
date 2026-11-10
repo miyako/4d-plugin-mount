@@ -245,7 +245,8 @@ void listenerLoopExecuteMethod()
         PA_Unistring userInfo = PA_CreateUnistring((PA_Unichar *)USER_INFO.c_str());
         PA_SetStringVariable(&params[0], &userInfo);
         
-        PA_ExecuteMethodByID(methodId, params, 1);
+        PA_Variable result = PA_ExecuteMethodByID(methodId, params, 1);
+        PA_ClearVariable(&result);
         PA_ClearVariable(&params[0]);
         
     }else
@@ -260,7 +261,8 @@ void listenerLoopExecuteMethod()
         PA_Unistring method = PA_CreateUnistring((PA_Unichar *)mount::LISTENER_METHOD.getUTF16StringPtr());
         PA_SetStringVariable(&params[0], &method);
         
-        PA_ExecuteCommandByID(1007/* execute method */, params, 2);
+        PA_Variable result = PA_ExecuteCommandByID(1007/* execute method */, params, 2);
+        PA_ClearVariable(&result);
         PA_ClearVariable(&params[0]);
         PA_ClearVariable(&params[1]);
     }
