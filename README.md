@@ -209,4 +209,50 @@ Mount WATCH ("")  // stop
 
 Maintainers: [manual Bump and Build workflows](.github/README.md).
 
+## Native string ownership regression tests
+
+On macOS, run `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -p test_ownership.py -v`.
+This compiles the actual plugin, JSON helpers, text wrappers, and full unchanged
+bundled SDK with ASan/UBSan, using an engine-boundary shim instead of 4D.
+It performs no disk operations, signing, packaging, or publication; executables
+are temporary. SDK string, handle, and object/collection reference accounting
+checks cleanup even without LeakSanitizer.
+
+The ownership audit starts at `a66fc545c48082412b5a4ee57184cc6153b007ed`.
+Both source and bundled manifests declare the same three scalar text commands,
+dispatched by selectors 1-3. `Mount WATCH` reaches both synchronous callback
+paths: callback arguments own independent strings and are cleared after the call;
+discarded owning return variables must also be cleared. JSON helpers are compiled
+into the macOS target but have no command-path callers here. Property scalar
+getters copy before clearing their owning result; object/collection getters
+transfer successful owning references to the caller, who must dispose them,
+and clear mismatched results. Existing scalar setters start from Undefined,
+avoiding an allocated empty string being overwritten by a shallow setter.
+
+`C_TEXT` is compiled and copies parameter text into C++ storage; its return setter
+uses the engine-backed content setter, not array descriptor transfer.
+`ARRAY_TEXT` and `C_BLOB` are tracked but absent from Xcode's source phase.
+The dormant array wrapper copies inputs and creates independent output strings;
+successful SDK array insertion disposes the old element and transfers the new
+descriptor, while rejected type/index/null-data destinations retain caller
+ownership. No `CPicture` or `C_POINTER` wrapper is present. Third-party JsonCpp
+and engine-internal SDK implementation maintenance are outside this audit.
+The SDK implementation says `rev : v14`, its header `rev : v13`; neither
+establishes an upstream release identity.
+
+The shim covers both callback routes, independent/copy-of-input string returns,
+object/collection returns, scalar getters and type mismatches, successful owning
+reference handoffs, existing setters/stringify, and array copies, replacement,
+shrink, clear and rejection. Exact ASCII, BMP, supplementary-character, empty,
+and allocated/null empty-string cases are checked. To rerun against an immutable
+source export, set `MOUNT_OWNERSHIP_SOURCE_ROOT` to that export; the current test
+harness is compiled against its unmodified sources.
+
+These are host-shim results, not certification in real 4D or Windows. Allocation
+and resize failure recovery in dormant wrappers is not certified: in particular,
+the bundled SDK updates the array count even when handle resizing fails.
+No SDK rewrite or speculative cleanup of undocumented engine outputs is included.
+The Visual Studio project names the macOS-only source and is not evidence that
+the committed historical Windows stub can be rebuilt from this checkout.
+
 Older documentation: [miyako.github.io](https://miyako.github.io/2019/10/02/4d-plugin-mount)
